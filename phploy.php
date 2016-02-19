@@ -1,4 +1,8 @@
 <?php
+/**
+ * bump version
+ * document new option
+ */
 require __DIR__ . '/vendor/autoload.php';
 
 use Banago\PHPloy\PHPloy;

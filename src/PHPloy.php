@@ -515,6 +515,7 @@ class PHPloy
             'keypass' => '',
             'port' => '',
             'path' => '/',
+            'local_base_path' => '',
             'passive' => true,
             'skip' => array(),
             'purge' => array()
@@ -543,6 +544,10 @@ class PHPloy
 
             if (! empty($servers[$name]['skip'])) {
                 $this->filesToIgnore[$name] = array_merge($this->filesToIgnore[$name], $servers[$name]['skip']);
+            }
+
+            if (! empty($servers[$name]['base_dir'])) {
+                $this->baseDir = rtrim($servers[$name]['base_dir'], '/');
             }
 
             if (! empty($servers[$name]['include'])) {
@@ -777,8 +782,20 @@ class PHPloy
     private function filterIgnoredFiles($files)
     {
         $filesToSkip = array();
+        $filesToInclude = array();
 
         foreach ($files as $i => $file) {
+            // if a base_dir is configured, skip all files not in it
+            if ($this->baseDir) {
+                if (! $this->patternMatch("{$this->baseDir}/*", $file)) {
+                    //$file = str_replace("{$this->baseDir}/", '', $file);
+                //}
+                //else {
+                    $filesToSkip[] = $file;
+                    continue;
+                }
+            }
+
             $matched = false;
             foreach ($this->filesToInclude[$this->currentlyDeploying] as $pattern) {
                 if ($this->patternMatch($pattern, $file)) {
@@ -787,24 +804,28 @@ class PHPloy
                 }
             }
             if (! $matched) {
-                unset($files[$i]);
                 $filesToSkip[] = $file;
                 continue;
             }
 
             foreach ($this->filesToIgnore[$this->currentlyDeploying] as $pattern) {
                 if ($this->patternMatch($pattern, $file)) {
-                    unset($files[$i]);
                     $filesToSkip[] = $file;
                     break;
                 }
             }
-        }
 
-        $files = array_values($files);
+            $filesToInclude[] = $file;
+        }
+// $this->debug("include:");
+// var_dump($filesToInclude);
+// $this->debug("skip:");
+// var_dump($filesToSkip);
+// exit;
+        //$files = array_values($files);
 
         return array(
-            'files' => $files,
+            'files' => $filesToInclude,
             'filesToSkip' => $filesToSkip
         );
     }
@@ -848,6 +869,8 @@ class PHPloy
             }
 
             $files = $this->compare($revision);
+            var_dump($files);
+            return;
 
             $this->connect($server);
 
